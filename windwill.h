@@ -14,34 +14,39 @@ struct WindParams{
 
     int max_imgthresold;
     int min_imgthresold;
+
     int infer_frame_number;
     int infer_frame_number1;
     int infer_frame_number2;
+    int infer_again_number;
 
     float Armor_maxHWRation;
-//    float Armor_maxArea;
-//    float Armor_minArea;
+    //    float Armor_maxArea;
+    //    float Armor_minArea;
     float Leaf_minArea;
 
     bool Enemy_color;
+    bool FOLLOW_AIM;
 
-    int Min_n;
+    int Min_n;//小能量机关的转速
 
     WindParams()
     {
-
         max_imgthresold=100;
         min_imgthresold=60;
-        infer_frame_number=100;
+
+        infer_frame_number=50;//重要参数
         infer_frame_number1=infer_frame_number/3;
         infer_frame_number2=infer_frame_number*2/3;
+        infer_again_number=10;
 
         Armor_maxHWRation=0.7153846;
-//        Armor_maxArea=800;
-//        Armor_minArea=500;
+        //        Armor_maxArea=800;
+        //        Armor_minArea=500;
         Leaf_minArea=3000;//重要参数
 
-        Enemy_color=RED;
+        Enemy_color = RED;
+        FOLLOW_AIM=false;
 
         Min_n=600;
 
@@ -80,9 +85,11 @@ public:
         return 0.785*sin(1.884*t)+1.035;
     }
 
-    void Windclear(){
+    void windclear(){
+
         process_time=0;
         vector<Point2f>().swap(Armor_Centers);
+
         Radius=0;
         R_center=Point2f(0,0);
 
@@ -92,47 +99,45 @@ public:
         vector<Point2f>().swap(points_2d_temp);
         vector<Point2f>().swap(points_2d_Aim);
 
-        direction=CLKNONE;
-        Wind_flag=WIND_NONE;
+        if(Params.FOLLOW_AIM)
+            Params.infer_frame_number-=Params.infer_again_number;
+
+        Params.FOLLOW_AIM=false;
     }
 
     Mat src;
 
-/**********电控发视觉*********/
+    /**********电控发视觉*********/
     float shoot_time;//射击时间
     float process_time;//Max的t时间
 
-    int Wind_flag=WIND_NONE;//能量机关模式
-    int Shoot_flag=RESTORE_AIM;//射击情况
+    //wind_flag=WIND_NONE;//能量机关模式
+    //wind_shoot_flag=RESTORE_AIM;//射击情况
 
-/*********视觉发电控*********/
+    /*********视觉发电控*********/
 
     float yaw;
     float pitch;
     float distance;
 
-
-
-
-    typedef enum {
+    enum WIND_FlAG{
         WIND_NONE =0,
         WIND_MAX,
         WIND_MIN
-    }WIND_FlAG;
+    }wind_flag;
 
-    typedef enum {
+    enum Windirection{
         CLKNONE=0,
         CLKWISE,
         CCLKWISE
-    }Windirection;
+    }windirection;
 
-    typedef enum {
-        RESET_NEW =0,
+    enum WIND_SHOOT_FlAG {
+        RESTORE_AIM =0,
+        RESET_NEW,
         FOLLOW_AGAIN,
-        RESTORE_AIM
-    }SHOOT_FlAG;
 
-    int direction=CLKNONE;
+    }wind_shoot_flag;
 
 
 private:

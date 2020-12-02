@@ -1,25 +1,66 @@
 #include "windwill.h"
+#include "anglesolver.h"
+
+#define WIND_DEBUG
+
+#ifdef WIND_DEBUG
+    #define SHOW_OTSU
+    #define SHOW_CIRCLE
+    #define SHOW_FARTHER
+    #define SHOW_AIM
+#endif
 
 void Windwill::Action(){
-    Pre_process();
-    Get_target_Armor();
 
-    precise();
-    Circle_bound();
-    Direction();
+    VideoCapture cap("2.mov");
+    int number=0;
+    if(!cap.isOpened()) cout<<"Windwill img cap ERROR"<<endl;
+    else{
+        while(cap.isOpened()){
+            number++;
 
-    for(int i=0;i<4;i++)
-    {
-        if(Wind_flag==WIND_MIN){
-            points_2d_Aim.push_back(Min_Motion_Predict(points_2d_temp[i]));
-            Armor_Aim_center=Min_Motion_Predict(Armor_temp_center);
-        }
-        else if(Wind_flag==WIND_MAX){
-            points_2d_Aim.push_back(Max_Motion_Predict(points_2d_temp[i]));
-            Armor_Aim_center=Max_Motion_Predict(Armor_Aim_center);
+            if(wind_shoot_flag==FOLLOW_AGAIN){
+                Params.infer_frame_number+=Params.infer_again_number;
+                Params.FOLLOW_AIM=true;
+            }
+            else if (wind_shoot_flag==RESET_NEW)
+                windclear();
+
+            cap>>src;
+            resize(src,src,Size(1920,1080));
+            Pre_process();
+            Get_target_Armor();
+            precise();
+            Circle_bound();
+            Direction();
+
+            if(number==Params.infer_frame_number){
+                for(int i=0;i<4;i++)
+                {
+                    if(wind_flag==WIND_MIN){
+                        points_2d_Aim.push_back(Min_Motion_Predict(points_2d_temp[i]));
+                        Armor_Aim_center=Min_Motion_Predict(Armor_temp_center);
+                    }
+                    else if(wind_flag==WIND_MAX){
+                        points_2d_Aim.push_back(Max_Motion_Predict(points_2d_temp[i]));
+                        Armor_Aim_center=Max_Motion_Predict(Armor_Aim_center);
+                    }
+                }
+//                AngleSolver::p4pSolution(points_2d_Aim);
+//                AngleSolver::compensateOffset();
+//                AngleSolver::compensateGravity();
+
+//                pitch=AngleSolver::_xErr;
+//                yaw=AngleSolver::_yErr;
+//                distance=AngleSolver::_euclideanDistance;
+
+                //视觉发电控
+                //电控发视觉
+            }
+            waitKey(1);
         }
     }
-
+    cap.release();
 }
 
 void Windwill::Pre_process()
@@ -57,14 +98,15 @@ void Windwill::Pre_process()
 //
  //   imshow("temp1",temp1);
  //   imshow("temp2",temp2);
-//    imshow("temp",temp);
+#ifdef SHOW_OTSU
+    imshow("OTSU",temp);
+#endif
 
-//    waitKey(0);
 }
 
 void Windwill::Get_target_Armor()
 {
-    findContours(Leaf_preImg, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);
+    findContours(Leaf_preImg, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE);  
 
     if (hierarchy.size())
     {
@@ -120,12 +162,10 @@ void Windwill::Get_target_Armor()
                 {
                     if (hierarchy[hierarchy[i][2]][1] < 0 && hierarchy[hierarchy[i][2]][0] < 0)
                     {
-//                        //Find_armor=true;
-//                        Mat armor1=Mat(src,temp1);
-//                        imshow("father",armor1);
-
-                        for (int i = 0; i < 4; i++)
-                            line(src, p[i], p[(i+1)%4], Scalar(0,255,0),2);
+#ifdef SHOW_FARTHER
+                        Mat armor1=Mat(src,temp1);
+                        imshow("father",armor1);
+#endif
 
                         RotatedRect armor_rect = minAreaRect(contours[hierarchy[i][2]]);
                         Rect temp2=boundingRect(contours[hierarchy[i][2]]);
@@ -143,15 +183,16 @@ void Windwill::Get_target_Armor()
 
                         if ((height / width) > Params.Armor_maxHWRation) // Params.Armor_maxArea && area > Params.Armor_minArea)
                             continue;
+#ifdef SHOW_AIM
+                        for (int i = 0; i < 4; i++)
+                            line(src, p[i], p[(i+1)%4], Scalar(0,255,0),2);
 
                         for (int i = 0; i < 4; i++)
                             line(src, pnt[i], pnt[(i+1)%4], Scalar(0,255,0),3);
 
                         circle(src,armor_rect.center,1,Scalar(0,0,255),8,LINE_8,0);
-
-                        Mat armor2=Mat(src,temp2);
-                        imshow("child",src);
-
+                        imshow("aim",src);
+#endif
                         Armor_rect.push_back(armor_rect);
                         Armor_Centers.push_back(armor_rect.center);
                     }
@@ -164,7 +205,7 @@ void Windwill::Get_target_Armor()
 Mat Windwill::getSvmInput(Mat &input)
 {
     vector<float> vec=stander(input);
-    if(vec.size()!=900) cout<<"wrong1 not 900"<<endl;
+    //if(vec.size()!=900) cout<<"wrong1 not 900"<<endl;
     Mat output(1,900,CV_32FC1);
 
     Mat_<float> p=output;
@@ -303,17 +344,18 @@ void Windwill::Circle_bound()
         R_center.y = B;
         Radius = R;
     }
-
-    circle(src,R_center,Radius,Scalar(0,0,0),3);
-    circle(src,R_center,4,Scalar(0,0,0),3);
+#ifdef SHOW_CIRCLE
+    circle(src,R_center,Radius,Scalar(255,0,0),3);
+    circle(src,R_center,4,Scalar(255,0,0),3);
 
     cout<<R_center<<endl<<Radius<<endl;
     imshow("circle",src);
+#endif
 }
 
 void Windwill::Direction()
 {
-    if(Armor_Centers.size()==Params.infer_frame_number){
+    if((int)Armor_Centers.size()==Params.infer_frame_number){
 
         Point2f dis1 = Point2f((Armor_Centers[Params.infer_frame_number1].x - R_center.x), (Armor_Centers[Params.infer_frame_number1].y - R_center.y));
         Point2f dis2 = Point2f((Armor_Centers[Params.infer_frame_number2].x - R_center.x), (Armor_Centers[Params.infer_frame_number2].y - R_center.y));
@@ -322,16 +364,14 @@ void Windwill::Direction()
         double fai2 = atan(dis2.y / dis2.x);
 
         if (fai1 > fai2)
-            direction = CLKWISE;
+            windirection = CLKWISE;
         else
-            direction = CCLKWISE;
+            windirection = CCLKWISE;
     }
-
-    cout<<(int)direction<<endl;
 }
 
 void Windwill::precise(){
-    if(Armor_Centers.size()==Params.infer_frame_number){
+    if((int)Armor_Centers.size()==Params.infer_frame_number){
         int n = Armor_Centers.size();
 
         Point2f temp;
@@ -369,9 +409,9 @@ Point2f Windwill::Min_Motion_Predict(Point2f point1)
     Point2f point2;
 
     float fai = atan((point1.y - R_center.y) / (point1.x - R_center.x));
-    float tha = 2 * M_PI * Params.Min_n * shoot_time;
+    float tha = 2 * CV_PI * Params.Min_n * shoot_time;
 
-    if (direction == CLKWISE)
+    if (windirection == CLKWISE)
     {
         point2.x = Radius * cos(fai - tha) + R_center.x;
         point2.y = Radius * sin(fai - tha) + R_center.y;
@@ -400,7 +440,7 @@ Point2f Windwill::Max_Motion_Predict(Point2f point1)
         tha += (double)funct(i + process_time) * delta;
     }
 
-    if (direction == CLKWISE)
+    if (windirection == CLKWISE)
     {
         point2.x = Radius * cos(fai - tha) + R_center.x;
         point2.y = Radius * sin(fai - tha) + R_center.y;
