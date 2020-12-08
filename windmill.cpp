@@ -556,8 +556,11 @@ double WindMill::Max_Motion_Predict(const armorData new_data){
     {
         w=abs2(new_data.angle,lastData.angle)/new_data.time;
         ws.puch_back(w);
-        
-    }while();
+        if(ws.size>15){
+            w_max=ws[max_element(ws.begin(),ws.end())-ws.begin()];
+            w_min=ws[min_element(ws.begin(),ws.end())-ws.begin()];
+        }
+    }while(w_max==w||w_min==w);
 
     if(){     
         for (double i = 0; i < shoot_time; i += delta)
