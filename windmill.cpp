@@ -364,7 +364,6 @@ vector<float> WindMill::stander(Mat &im)
     hog.compute(im,result);
     return result;
 }
-/***********************************************/
 
 /// \brief 判断顺逆时针旋转
 bool WindMill::getDirection(){
@@ -546,23 +545,34 @@ bool WindMill::predict(const armorData data,Point2f& preCenter,int pMode){
 
 /// \brief 大符preAngle
 double WindMill::Max_Motion_Predict(const armorData new_data){
-    double S;
-    do
-    {
-        S=distance(new_data.armorCenter,lastData.armorCenter);
-    }while((int)S/0.1==(int)lastData.R_center*(0.785+1.305)||(int)S/0.1==(int)lastData.R_center*(-0.785+1.305));
-
-    double w=0.785*sin(1.884*lastData.time)+1.305;
-
+    double w;
     double tha = 0;
     const int N = 50000;
-
+    shoot_time=lastdata.time;
     double delta = shoot_time / N;
-
-    for (double i = 0; i < shoot_time; i += delta)
+    
+    vector<double> ws;
+    do
     {
-        tha += (double)funct(i + process_time) * delta;
+        w=abs2(new_data.angle,lastData.angle)/new_data.time;
+        ws.puch_back(w);
+        
+    }while();
+
+    if(){     
+        for (double i = 0; i < shoot_time; i += delta)
+            tha += Max_W_Function(i,CV_PI/2) * delta;
     }
+    else{
+       for (double i = 0; i < shoot_time; i += delta)
+            tha += Max_W_Function(i,-CV_PI/2) * delta; 
+    }
+    return tha;
+}
+
+/// \brief 大符Function
+double WindMill::Max_W_Function(double t,double fai){
+    return 0.785*sin(1.884*t+fai)+1.305;
 }
 
 /// \brief 判断是否切换
