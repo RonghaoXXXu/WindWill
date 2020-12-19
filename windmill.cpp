@@ -366,6 +366,7 @@ bool WindMill::getDirection(){
 
     if(times < param.infer_frame_number){
         datas.push_back(lastData);
+        armorPoints.push_back(lastData.armorCenter)
         times++;
         return false;
     }else
@@ -458,12 +459,13 @@ bool WindMill::predict(const armorData data,Point2f& preCenter,int pMode)
         static int count = 0;
         static vector<Point2f> armorPoints;
         if(count < param.infer_frame_number){
-            armorPoints.push_back(data.armorCenter);
-            count++;
+//             armorPoints.push_back(data.armorCenter);
+//             count++;
             return false;
         }else if(count == param.infer_frame_number){
             Point2f center;
             circleLeastFit(armorPoints,center);
+            vector<Point2f>().swap(armorPoints);
 
             if(detect_mode == RED_ANCLOCK || detect_mode == BLUE_ANCLOCK){
                 preAngle = preAngle;
