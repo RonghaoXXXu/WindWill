@@ -106,8 +106,10 @@ public:
     armorData lastData;
     armorData lostData;
 
-    Point2f pre_points[4]={Point2f(0,0)};
+    Point2f pre_points[4]={Point2f(0,0)};//predit
 
+    static vector<Point2f> armorPoints;//SHOOT_MAX->circleLeastFit
+    
     clock_t start;
     ofstream file;
 private:
