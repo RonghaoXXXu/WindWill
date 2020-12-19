@@ -595,51 +595,40 @@ bool WindMill::predict(const armorData data,Point2f& preCenter,int pMode)
 
 /// \brief 大符preAngle
 double WindMill::Max_Motion_Predict(const armorData new_data){
-    double w,w_max,w_min;
     double tha = 0;
     const int N = 50000;
-    param.shoot_time=new_data.time;
     double delta = param.shoot_time / N;
 
     static vector<double> ws;
-    static int times = 0;
+    static bool _peak = false;
+    static bool _valley = false;
 
-    w=(new_data.angle-lastData.angle)/(new_data.time);
+    double w=(new_data.angle-lastData.angle)/(new_data.time);
+    ws.push_back(w);
+    
+    if(ws.size()<3)  return 0.0;
+    
+    if(ws[ws.size()-1]>w && ws[ws.size()-2]<ws[ws.size()-1]){
+        _peak = true;
+        times = ws.size();
+    else if(ws[ws.size()-1]<w && ws[ws.size()-2]>ws[ws.size()-1]){
+        _valley = true;
+        times = ws.size();
+    else return 0.0;
 
-    if(times < param.infer_frame_number){
-        ws.push_back(w);
-        times++;
-        return 0.0;
-    }
-    else
-    {
-        if(int(ws.size()) != param.infer_frame_number - 5 ) {
-            times = 0;
-            ws.clear();
-            return 0.0;
-        }
-
-        int l=0,r=ws.size()-1;
-        while(l<r)
-        {
-            int mid=(l+r)/2;
-            if(ws[mid]<ws[mid+1]) l=mid+1;
-            else
-                r=mid;
-        }
-
-
-    }
-
-    if(w_max==w){
-        for (double i = 0; i < param.shoot_time; i += delta)
+    if(_peak){
+        for (double i = new_data.time; i < param.shoot_time + new_data.time; i += delta)
             tha += Max_W_Function(i,CV_PI/2) * delta;
     }
-    else{
-        for (double i = 0; i < param.shoot_time; i += delta)
+    if(_valley){
+        for (double i = new_data.time; i < param.shoot_time + new_data.time; i += delta)
             tha += Max_W_Function(i,-CV_PI/2) * delta;
     }
+        
     vector<double>().swap(ws);
+    _peak = false;
+    _valley = false;
+        
     return tha;
 }
 
